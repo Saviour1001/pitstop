@@ -9,17 +9,6 @@ contract WormholePitstopTest is Test {
 
     function setUp() public {
         wormholePitstop = new WormholePitstop();
-        wormholePitstop.setNumber(0);
-    }
-
-    function test_Increment() public {
-        wormholePitstop.increment();
-        assertEq(wormholePitstop.number(), 1);
-    }
-
-    function testFuzz_SetNumber(uint256 x) public {
-        wormholePitstop.setNumber(x);
-        assertEq(wormholePitstop.number(), x);
     }
 }
 
