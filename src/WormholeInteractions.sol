@@ -34,7 +34,7 @@ abstract contract WormholeInteractions is Ownable, TokenSender, TokenReceiver{
 
     function sendNativeCrossChainDeposit(
         uint16 targetChain,
-        address targetHelloToken,
+        address targetToken,
         address recipient,
         uint256 amount
     ) public payable {
@@ -50,7 +50,7 @@ abstract contract WormholeInteractions is Ownable, TokenSender, TokenReceiver{
         bytes memory payload = abi.encode(recipient);
         sendTokenWithPayloadToEvm(
             targetChain,
-            targetHelloToken, // address (on targetChain) to send token and payload to
+            targetToken, // address (on targetChain) to send token and payload to
             payload,
             0, // receiver value
             GAS_LIMIT,
