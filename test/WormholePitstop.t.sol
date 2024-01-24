@@ -10,11 +10,8 @@ contract WormholePitstopTest is WormholeRelayerBasicTest {
     WormholePitstop public wormholePitstop;
 
     function setUpSource() public override {
-        wormholePitstop = new WormholePitstop(
-            address(relayerSource),
-            address(tokenBridgeSource),
-            address(wormholeSource)
-        );
+        wormholePitstop =
+            new WormholePitstop(address(relayerSource), address(tokenBridgeSource), address(wormholeSource));
     }
 
     function setUpTarget() public override {}
