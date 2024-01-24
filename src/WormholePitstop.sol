@@ -17,8 +17,38 @@ contract WormholePitstop is WormholeInteractions {
         uint256 amount;
     }
 
-    function usePitstop() public {
+    function quotePitstop(
+        PitstopInfo[] calldata _pitstopInfo
+    ) public view returns (uint256 totalFees) {
+        for (uint256 i = 0; i < _pitstopInfo.length; i++) {
+            totalFees += quoteCrossChainDeposit(_pitstopInfo[i].targetChain);
+        }
+    }
+
+    function usePitstop(
+        PitstopInfo[] calldata _pitstopInfo,
+        address _receiver
+    ) external payable {
+        uint256 totalFees = quotePitstop(_pitstopInfo);
+        require(
+            msg.value == totalFees,
+            "msg.value must be quoteCrossChainDeposit(targetChain) + amount"
+        );
+
+        for (uint256 i = 0; i < _pitstopInfo.length; i++) {
+            PitstopInfo calldata info = _pitstopInfo[i];
+            sendNativeCrossChainDeposit(
+                info.targetChain,
+                address(0),
+                _receiver,
+                info.amount
+            );
+        }
 
     }
-    
+
+    function withdraw() external onlyOwner {
+        payable(owner()).transfer(address(this).balance);
+    }
+
 }
