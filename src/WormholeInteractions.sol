@@ -5,6 +5,8 @@ import "wormhole-solidity-sdk/WormholeRelayerSDK.sol";
 import "wormhole-solidity-sdk/interfaces/IERC20.sol";
 import "wormhole-solidity-sdk/interfaces/IWETH.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {console} from "forge-std/Test.sol";
+
 
 abstract contract WormholeInteractions is Ownable, TokenSender, TokenReceiver {
     uint256 constant GAS_LIMIT = 250_000;
@@ -27,7 +29,8 @@ abstract contract WormholeInteractions is Ownable, TokenSender, TokenReceiver {
         payable
     {
         uint256 cost = quoteCrossChainDeposit(targetChain);
-        require(msg.value == cost + amount, "msg.value must be quoteCrossChainDeposit(targetChain) + amount");
+        console.log("Total fees from interactions", cost + amount);
+        require(msg.value >= cost + amount, "Interactions: msg.value must be quoteCrossChainDeposit(targetChain) + amount");
 
         IWETH wrappedNativeToken = tokenBridge.WETH();
         wrappedNativeToken.deposit{value: amount}();
@@ -42,5 +45,19 @@ abstract contract WormholeInteractions is Ownable, TokenSender, TokenReceiver {
             address(wrappedNativeToken), // address of IERC20 token contract
             amount
         );
+    }
+
+    function receivePayloadAndTokens(
+        bytes memory payload,
+        TokenReceived[] memory receivedTokens,
+        bytes32, // sourceAddress
+        uint16,
+        bytes32 // deliveryHash
+    ) internal override onlyWormholeRelayer {
+        require(receivedTokens.length == 1, "Expected 1 token transfers");
+
+        address recipient = abi.decode(payload, (address));
+
+        IERC20(receivedTokens[0].tokenAddress).transfer(recipient, receivedTokens[0].amount);
     }
 }

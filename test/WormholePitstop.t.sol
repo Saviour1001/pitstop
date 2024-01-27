@@ -10,6 +10,10 @@ contract WormholePitstopTest is WormholeRelayerBasicTest {
     WormholePitstop public wormholePitstop;
     WormholePitstop public wormholePitstopTarget;
 
+    constructor() {
+        setTestnetForkChains(4, 5);
+    }
+
     function setUpSource() public override {
         wormholePitstop =
             new WormholePitstop(address(relayerSource), address(tokenBridgeSource), address(wormholeSource));
@@ -22,23 +26,55 @@ contract WormholePitstopTest is WormholeRelayerBasicTest {
 
     function testQuotePitstop() public view {
         WormholePitstop.PitstopInfo[] memory pitstopInfo = new WormholePitstop.PitstopInfo[](1);
-        pitstopInfo[0] = WormholePitstop.PitstopInfo({targetChain: 2, amount: 100});
+        pitstopInfo[0] = WormholePitstop.PitstopInfo({targetChain: targetChain, amount: 100});
         uint256 totalFees = wormholePitstop.quotePitstop(pitstopInfo);
-        console.log("totalFees", totalFees);
+        console.log("Single chain: %s", totalFees);
     }
 
-    function testUsePitstop() public payable {
+    function testQuotePitstopWithMultipleChains() public view {
+        WormholePitstop.PitstopInfo[] memory pitstopInfo = new WormholePitstop.PitstopInfo[](2);
+        pitstopInfo[0] = WormholePitstop.PitstopInfo({targetChain: targetChain, amount: 100});
+        pitstopInfo[1] = WormholePitstop.PitstopInfo({targetChain: targetChain, amount: 200});
+        uint256 totalFees = wormholePitstop.quotePitstop(pitstopInfo);
+
+        console.log("Multiple chains: %s", totalFees);
+    }
+
+    function testUsePitstop() public {
+        uint256 amount = 19e17;
+
+        vm.selectFork(targetFork);
+        address recipient = 0x1234567890123456789012345678901234567890;
+
+        vm.selectFork(sourceFork);
         WormholePitstop.PitstopInfo[] memory pitstopInfo = new WormholePitstop.PitstopInfo[](1);
-        pitstopInfo[0] = WormholePitstop.PitstopInfo({targetChain: 2, amount: 100});
-        uint256 totalFees = wormholePitstop.quotePitstop(pitstopInfo);
+        pitstopInfo[0] = WormholePitstop.PitstopInfo({targetChain: targetChain, amount: amount});
 
-        console.log("totalFees", totalFees);
+        // cost calculation
 
-        wormholePitstop.usePitstop{value: totalFees+ 100000}(pitstopInfo, address(this));
+        uint256 totalBridgingFees = wormholePitstop.quotePitstop(pitstopInfo);
 
-        // wormholePitstop.usePitstop{value: 1000}(pitstopInfo, address(this));
+        uint256 totalAmount = 0;
+        for (uint256 i = 0; i < pitstopInfo.length; i++) {
+            totalAmount += pitstopInfo[i].amount;
+        }
+
+        uint256 totalAmountWithFees = totalAmount + totalBridgingFees;
+
+        ////////////////
+        address wethAddress = address(tokenBridgeSource.WETH());
+        vm.recordLogs();
+
+        wormholePitstop.usePitstop{value: totalAmountWithFees}(pitstopInfo, recipient);
+        performDelivery();
+
+        vm.selectFork(targetFork);
+        address wormholeWrappedToken = tokenBridgeTarget.wrappedAsset(sourceChain, toWormholeFormat(wethAddress));
+        // assertEq(IERC20(wormholeWrappedToken).balanceOf(recipient), amount);
+
+        console.log("Balance after bridging", IERC20(wormholeWrappedToken).balanceOf(recipient));
+        
+        
+
     }
-    
-
-
 }
